@@ -398,6 +398,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- PHOTO CHOOSER -->
+<div class="overlay" id="photoChooser" onclick="if(event.target===this)CHOOSER.close()">
+  <div class="sheet" style="max-height:280px;">
+    <div class="sheet-hdr">
+      <span class="sheet-title">&#x1F4F7; Dodaj fotografiju</span>
+      <button class="sheet-close" onclick="CHOOSER.close()">&#x2715;</button>
+    </div>
+    <div class="sheet-body" style="display:flex;flex-direction:column;gap:10px;padding-bottom:24px;">
+      <button class="ebtn p" style="margin:0;" onclick="CHOOSER.camera()">&#x1F4F7; Kamera</button>
+      <button class="ebtn s" style="margin:0;" onclick="CHOOSER.gallery()">&#x1F5BC;&#xFE0F; Galerija</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="ph_cam" accept="image/*" capture="environment" style="display:none" onchange="CHOOSER.handle(event)">
+<input type="file" id="ph_gal" accept="image/*" multiple style="display:none" onchange="CHOOSER.handle(event)">
+
 <script>
 // ===================================================
 // CONSTANTS
@@ -972,10 +988,8 @@ function machHTML(m,i) {
       <div class="m-photo-area">
         ${m.photo?`<img class="m-photo-thumb" src="${m.photo}" onclick="openLB('__m${i}')">
           <button class="m-photo-rm" onclick="rmMPhoto(${i})">Obriši</button>`
-        :`<label class="m-photo-add" onclick="document.getElementById('mph-${i}').click()">
-            <span>&#x1F4F7;</span><small>Slikaj</small></label>`}
-        <input type="file" id="mph-${i}" class="ph-inp" accept="image/*" capture="environment"
-          onchange="setMPhoto(event,${i})">
+        :`<div class="m-photo-add" onclick="CHOOSER.open(null,${i})">
+            <span>&#x1F4F7;</span><small>Foto</small></div>`}
       </div>
     </div>
   </div>`;
@@ -1010,10 +1024,8 @@ function ciHTML(it) {
     <div class="ph-strip" id="ps-${it.id}">
       ${fPh.map(ph=>`<div class="ph-tw"><img class="ph-th" src="${ph.data}" onclick="openLB('${ph.id}')">
         <div class="ph-rm" onclick="rmPhoto('${ph.id}')">&#xD7;</div></div>`).join('')}
-      <label class="ph-add" onclick="document.getElementById('fi-${it.id}').click()">
-        <span>&#x1F4F7;</span><small>Foto</small></label>
-      <input type="file" id="fi-${it.id}" class="ph-inp" accept="image/*"
-        onchange="addPhotos(event,'${it.id}')">
+      <div class="ph-add" onclick="CHOOSER.open('${it.id}')">
+        <span>&#x1F4F7;</span><small>Foto</small></div>
     </div>`:'';
   return `<div class="ci ${cls}" id="ci-${it.id}">
     <div class="ci-hd"><span class="ci-num">${it.id}</span><span class="ci-txt">${it.txt}</span></div>
@@ -1096,8 +1108,8 @@ function renderGenGal() {
   c.innerHTML=gph.map(ph=>`<div class="gal-item">
     <img class="gal-img" src="${ph.data}" onclick="openLB('${ph.id}')">
     <div class="gal-rm" onclick="rmPhoto('${ph.id}')">&#xD7;</div>
-  </div>`).join('')+`<label class="gal-add" onclick="document.getElementById('genPhInp').click()">
-    <span>&#x1F4F7;</span><small>Dodaj</small></label>`;
+  </div>`).join('')+`<div class="gal-add" onclick="CHOOSER.open('general')">
+    <span>&#x1F4F7;</span><small>Dodaj</small></div>`;
 }
 
 // ===================================================
@@ -1318,6 +1330,43 @@ function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
   setTimeout(()=>t.classList.remove('on'),2600);
 }
+
+// ===================================================
+// PHOTO CHOOSER
+// ===================================================
+const CHOOSER = {
+  group: null,
+  machIdx: null,
+  open(group, machIdx=null) {
+    this.group = group;
+    this.machIdx = machIdx;
+    document.getElementById('photoChooser').classList.add('on');
+  },
+  camera() {
+    this.close();
+    document.getElementById('ph_cam').click();
+  },
+  gallery() {
+    this.close();
+    document.getElementById('ph_gal').click();
+  },
+  close() {
+    document.getElementById('photoChooser').classList.remove('on');
+  },
+  async handle(ev) {
+    try {
+      if (this.machIdx !== null) {
+        await setMPhoto(ev, this.machIdx);
+      } else if (this.group) {
+        await addPhotos(ev, this.group);
+      }
+    } finally {
+      this.group = null;
+      this.machIdx = null;
+      ev.target.value = '';
+    }
+  }
+};
 
 init();
 </script>
